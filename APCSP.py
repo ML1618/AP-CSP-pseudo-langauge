@@ -166,6 +166,9 @@ class NumberNode:
     def __init__(self, token):
         self.token = token
 
+        self.pos_start = self.token.pos_start
+        self.pos_end = self.token.pos_end
+
     def __repr__(self):
         return f'{self.token}'
     
@@ -175,9 +178,23 @@ class BinOpNode:
         self.op_token = op_token
         self.right_node = right_node
 
+        self.pos_start = self.left_node.pos_start
+        self.pos_end = self.right_node.pos_end
+
     def __repr__(self):
         return f'({self.left_node}, {self.op_token}, {self.right_node})'
     
+class UnaryOpNode:
+    def __init__(self, op_token, node):
+        self.op_token = op_token
+        self.node = node
+
+        self.pos_start = self.op_token.pos_start
+        self.pos_end = node.pos_end
+
+    def __repr__(self):
+        return f'({self.op_token}, {self.node})'
+
 ###############################
 # PARSE RESULT
 ###############################
@@ -231,9 +248,26 @@ class Parser:
         res = ParseResult()
         token = self.current_token
 
-        if token.type in (TT_INT, TT_FLOAT):
+        if token.type in (TT_PLUS, TT_MINUS):
+            res.register(self.advance())
+            factor = res.register(self.factor())
+            if res.error: return res
+            return res.success(UnaryOpNode(token, factor))
+        elif token.type in (TT_INT, TT_FLOAT):
             res.register(self.advance())
             return res.success(NumberNode(token))
+        elif token.type == TT_LPAREN:
+            res.register(self.advance())
+            expr = res.register(self.expr())
+            if res.error: return res
+            if self.current_token.type == TT_RPAREN:
+                res.register(self.advance())
+                return res.success(expr)
+            else:
+                return res.failure(InvalidSyntaxError(
+                    self.current_token.pos_start, self.current_token.pos_end,
+                    "Expected ')'"
+                ))
         
         return res.failure(InvalidSyntaxError(
             token.pos_start, token.pos_end,
@@ -260,18 +294,92 @@ class Parser:
             left = BinOpNode(left, op_token, right)
 
         return res.success(left)
+    
+###############################
+# VALUES
+###############################
+
+class Number:
+    def __init__(self, value):
+        self.value = value
+        self.set_pos()
+
+    def set_pos(self, pos_start=None, pos_end=None):
+        self.pos_start = pos_start
+        self.pos_end = pos_end
+        return self
+    
+    def added_to(self, other):
+        if isinstance(other, Number):
+            return Number(self.value + other.value)
         
+    def subtracted_by(self, other):
+        if isinstance(other, Number):
+            return Number(self.value - other.value)
+        
+    def multiplied_by(self, other):
+        if isinstance(other, Number):
+            return Number(self.value * other.value)
+        
+    def divided_by(self, other):
+        if isinstance(other, Number):
+            return Number(self.value / other.value) # Possible divide by 0 error
+        
+###############################
+# INTERPRETER
+###############################
+
+class Interpreter:
+    def visit(self, node):
+        method_name = f'visit_{type(node).__name__}'
+        method = getattr(self, method_name, self.no_visit_method)
+        return method(node)
+    
+    def no_visit_method(self, node):
+        raise Exception(f'No visit_{type(node).__name__} method defined')
+    
+    def visit_NumberNode(self, node):
+        return Number(node.token.value).set_pos(node.pos_start, node.pos_end)
+
+    def visit_BinOpNode(self, node):
+        left = self.visit(node.left_node)
+        right = self.visit(node.right_node)
+
+        if node.op_token.type == TT_PLUS:
+            result = left.added_to(right)
+        elif node.op_token.type == TT_MINUS:
+            result = left.subtracted_by(right)
+        elif node.op_token.type == TT_MULT:
+            result = left.multiplied_by(right)
+        elif node.op_token.type == TT_DIV:
+            result = left.divided_by(right)
+
+        return result.set_pos(node.pos_start, node.pos_end)
+
+    def visit_UnaryOpNode(self, node):
+        number = self.visit(node.node)
+
+        if node.op_token.type == TT_MINUS:
+            number = number.multiplied_by(Number(-1))
+        return number.set_pos(node.pos_start, node.pos_end)
 
 ###############################
 # RUN
 ###############################
 
 def run(fn, text):
+    # Generate tokens
     lexer = Lexer(fn, text)
     tokens, error = lexer.make_tokens()
     if error: return None, error
     
+    # Generate AST
     parser = Parser(tokens)
     ast = parser.parse()
+    if ast.error: return None, ast.error
 
-    return ast.node, ast.error
+    # Run program
+    interpreter = Interpreter()
+    result = interpreter.visit(ast.node)
+
+    return result, None
