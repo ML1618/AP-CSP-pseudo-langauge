@@ -9,7 +9,7 @@ Progress:
  - Parser episode finished
  - Interpreter episode finished
  - Power operator finished
- - Variable episode in progress (9:32)
+ - Variable episode finished
 
 Deviations from AP CSP language:
  - I use power operators because (a) the tutorial I'm following uses them and it'd be too hard/annoying to work around that, and (b) power operators can be useful
@@ -18,6 +18,7 @@ Deviations from AP CSP language:
 
 Specific syntax:
  - `←` is the character used for variable assignment
+ - `^` is the power operator
 
 Issues:
  - Arrows (carets) under errors don't extend the whole way through, like they do in the video
