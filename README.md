@@ -24,3 +24,6 @@ Specific syntax:
 
 Issues:
  - Arrows (carets) under errors don't extend the whole way through, like they do in the video
+
+To-Do:
+ - Make the IF statement part match the video for now, but later change it to match the AP CSP language
