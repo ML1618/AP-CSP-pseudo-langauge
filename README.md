@@ -16,11 +16,12 @@ Progress:
 Deviations from AP CSP language:
  - `←` as the assignment operator is too annoying to use (you have to copy/paste it and it's not muscle memory), so I use `=` instead.
  - I use power operators because (a) the tutorial I'm following uses them and it'd be too hard/annoying to work around that, and (b) power operators can be useful
- - Declare variables with VAR [identifier] <- [expr] (AP CSP doesn't use VAR)
+ - Declare variables with VAR (AP CSP doesn't use VAR)
     - The video used VAR and I felt it would be too hard/annoying to cut it
 
 Specific syntax:
  - `^` is the power operator
+ - VAR [identifier] = [expr]
 
 Issues:
  - Arrows (carets) under errors don't extend the whole way through, like they do in the video
